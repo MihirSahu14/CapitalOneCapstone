@@ -22,10 +22,18 @@ class FraudScorer:
         )
 
     def _to_uniform_percentile(self, prob: float) -> float:
-        # Percentile rank maps model probability into near-uniform [0, 1] score.
-        return float(np.searchsorted(self.calibration_scores, prob, side="right") / len(self.calibration_scores))
+        return float(
+            np.searchsorted(self.calibration_scores, prob, side="right")
+            / len(self.calibration_scores)
+        )
 
     def score(self, tx: dict[str, Any]) -> float:
-        frame = pd.DataFrame([tx])
+        # Only pass features the model expects (NO timestamp)
+        frame = pd.DataFrame([{
+            "amount": tx.get("amount"),
+            "merchant": tx.get("merchant"),
+            "location": tx.get("location"),
+        }])
+
         prob = float(self.model.predict_proba(frame)[:, 1][0])
-        return self._to_uniform_percentile(prob)
+        return round(self._to_uniform_percentile(prob), 4)

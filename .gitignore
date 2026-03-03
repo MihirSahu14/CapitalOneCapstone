@@ -5,3 +5,5 @@ __pycache__/
 .env
 data/raw/*.csv
 data/processed/*.joblib
+.env
+data/processed/local.db
