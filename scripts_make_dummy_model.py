@@ -26,7 +26,7 @@ pipe = Pipeline([
     ("clf", LogisticRegression(max_iter=500)),
 ])
 
-# Synthetic training data (timestamp is NOT used)
+# Synthetic training data
 df = pd.DataFrame([
     {"amount": 5.0,   "merchant": "Starbucks", "location": "Madison", "is_fraud": 0},
     {"amount": 12.0,  "merchant": "Target",    "location": "Madison", "is_fraud": 0},

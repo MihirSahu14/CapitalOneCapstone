@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Optional, Protocol
 
@@ -22,8 +23,9 @@ class Store(Protocol):
 
     # Pending lists
     def get_pending_transactions_for_account(self, account_id: str, limit: int = 10) -> list[dict[str, Any]]: ...
+    def get_latest_pending_transaction_for_account(self, account_id: str) -> dict[str, Any] | None: ...
 
-    # Conversation state (store YES/NO while waiting for “1/2/3”)
+    # Conversation state
     def set_pending_decision_for_phone(self, phone_number: str, decision: str) -> None: ...
     def get_pending_decision_for_phone(self, phone_number: str) -> str | None: ...
     def clear_pending_decision_for_phone(self, phone_number: str) -> None: ...
@@ -37,7 +39,7 @@ class Store(Protocol):
 # Demo-safe. For production, use GSIs + Query, and store conversation state in Dynamo as well.
 # -----------------------------
 class DynamoStore:
-    _decision_cache: dict[str, str] = {}  # demo-only in-memory (works in local run, not reliable in Lambda)
+    _decision_cache: dict[str, str] = {}
 
     def __init__(self) -> None:
         dynamodb = boto3.resource("dynamodb", region_name=settings.aws_region)
@@ -93,6 +95,10 @@ class DynamoStore:
         items = res.get("Items", [])
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return items[:limit]
+
+    def get_latest_pending_transaction_for_account(self, account_id: str) -> dict[str, Any] | None:
+        pending = self.get_pending_transactions_for_account(account_id, limit=1)
+        return pending[0] if pending else None
 
     # Conversation state (demo-only)
     def set_pending_decision_for_phone(self, phone_number: str, decision: str) -> None:
@@ -156,7 +162,6 @@ class SQLiteStore:
                 )
                 """
             )
-            # Conversation state table: stores YES/NO while waiting for selection
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS conversation_state (
@@ -167,7 +172,6 @@ class SQLiteStore:
                 """
             )
 
-            # If DB existed before these columns, add them safely
             cols = {row["name"] for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
             if "pending_confirm" not in cols:
                 conn.execute("ALTER TABLE transactions ADD COLUMN pending_confirm INTEGER NOT NULL DEFAULT 0")
@@ -262,6 +266,10 @@ class SQLiteStore:
                     d["is_fraud"] = bool(d["is_fraud"])
                 out.append(d)
             return out
+
+    def get_latest_pending_transaction_for_account(self, account_id: str) -> dict[str, Any] | None:
+        pending = self.get_pending_transactions_for_account(account_id, limit=1)
+        return pending[0] if pending else None
 
     # Conversation state
     def set_pending_decision_for_phone(self, phone_number: str, decision: str) -> None:
