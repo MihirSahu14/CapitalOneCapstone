@@ -3,7 +3,6 @@ __pycache__/
 .pytest_cache/
 *.pyc
 .env
-data/raw/*.csv
 data/processed/*.joblib
 .env
 data/processed/local.db
