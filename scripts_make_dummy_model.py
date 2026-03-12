@@ -1,50 +1,80 @@
+from __future__ import annotations
+
 import os
+
 import joblib
-import numpy as np
 import pandas as pd
-
 from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-# Numeric pipeline: scale amount
-num_pipe = Pipeline([
-    ("scaler", StandardScaler()),
-])
+DATA_PATH = "data/raw/fraudTest.csv"
+MODEL_PATH = "data/processed/model.joblib"
 
-pre = ColumnTransformer(
-    transformers=[
-        ("num", num_pipe, ["amount"]),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), ["merchant", "location"]),
-    ],
-    remainder="drop",
-)
+SOURCE_FEATURES = ["amt", "merchant", "city", "is_fraud"]
+MODEL_FEATURES = ["amount", "merchant", "location"]
 
-pipe = Pipeline([
-    ("pre", pre),
-    ("clf", LogisticRegression(max_iter=500)),
-])
 
-# Synthetic training data
-df = pd.DataFrame([
-    {"amount": 5.0,   "merchant": "Starbucks", "location": "Madison", "is_fraud": 0},
-    {"amount": 12.0,  "merchant": "Target",    "location": "Madison", "is_fraud": 0},
-    {"amount": 43.21, "merchant": "Walmart",   "location": "Chicago", "is_fraud": 0},
-    {"amount": 250.0, "merchant": "Apple",     "location": "Chicago", "is_fraud": 1},
-    {"amount": 800.0, "merchant": "BestBuy",   "location": "Chicago", "is_fraud": 1},
-])
+def build_pipeline() -> Pipeline:
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), ["amount"]),
+            ("cat", OneHotEncoder(handle_unknown="ignore"), ["merchant", "location"]),
+        ],
+        remainder="drop",
+    )
 
-X = df[["amount", "merchant", "location"]]
-y = df["is_fraud"].astype(int)
+    return Pipeline(
+        steps=[
+            ("preprocess", preprocess),
+            ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
+        ]
+    )
 
-pipe.fit(X, y)
 
-artifact = {
-    "model": pipe,
-    "calibration_scores": np.linspace(0, 1, 1001).tolist(),
-}
+def load_training_frame(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path, usecols=SOURCE_FEATURES)
+    df = df.rename(columns={"amt": "amount", "city": "location"})
+    df = df.dropna(subset=MODEL_FEATURES + ["is_fraud"])
+    df["is_fraud"] = df["is_fraud"].astype(int)
+    return df
 
-os.makedirs("data/processed", exist_ok=True)
-joblib.dump(artifact, "data/processed/model.joblib")
-print("Wrote data/processed/model.joblib")
+
+def main() -> None:
+    df = load_training_frame(DATA_PATH)
+    x = df[MODEL_FEATURES]
+    y = df["is_fraud"]
+
+    x_train, x_test, y_train, y_test = train_test_split(
+        x,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y,
+    )
+
+    model = build_pipeline()
+    model.fit(x_train, y_train)
+
+    test_probs = model.predict_proba(x_test)[:, 1]
+    test_pred = (test_probs >= 0.5).astype(int)
+    print(f"Trained on {len(x_train):,} rows, tested on {len(x_test):,} rows")
+    print(f"ROC AUC: {roc_auc_score(y_test, test_probs):.4f}")
+    print(classification_report(y_test, test_pred))
+
+    calibration_scores = sorted(model.predict_proba(x_train)[:, 1].tolist())
+    artifact = {
+        "model": model,
+        "calibration_scores": calibration_scores,
+    }
+
+    os.makedirs("data/processed", exist_ok=True)
+    joblib.dump(artifact, MODEL_PATH)
+    print(f"Wrote {MODEL_PATH}")
+
+
+if __name__ == "__main__":
+    main()
