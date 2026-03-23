@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import Any
+from datetime import datetime, timezone
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -42,3 +43,13 @@ class DynamoStore:
         items = res.get("Items", [])
         items.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return items[:limit]
+
+    def update_threshold(self, account_id: str, new_threshold: float) -> None:
+        self.accounts.update_item(
+            Key={"account_id": account_id},
+            UpdateExpression="SET threshold = :t, updated_at = :u",
+            ExpressionAttributeValues={
+                ":t": Decimal(str(new_threshold)),
+                ":u": datetime.now(timezone.utc).isoformat()
+            }
+        )

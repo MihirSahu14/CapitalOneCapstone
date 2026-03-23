@@ -13,6 +13,8 @@ class CreateAccountRequest(BaseModel):
     phone_number: str = Field(..., description="E.164 format, e.g. +16085551234")
     threshold: float = Field(0.8, ge=0.0, le=1.0)
 
+class UpdateThresholdRequest(BaseModel):
+    threshold: float = Field(..., ge=0.0, le=1.0, description="New fraud detection threshold (0.0-1.0)")
 
 @router.post("")
 def create_account(payload: CreateAccountRequest) -> dict:
@@ -50,3 +52,27 @@ def delete_account(phone_number: str) -> dict:
         raise HTTPException(status_code=404, detail="Account not found")
     db.delete_account(existing["account_id"])
     return {"deleted": existing["account_id"]}
+
+
+@router.patch("/by-phone/{phone_number}/threshold")
+def update_threshold_by_phone(phone_number: str, payload: UpdateThresholdRequest) -> dict:
+    db = DynamoStore()
+
+    # Look up account by phone
+    account = db.get_account_by_phone(phone_number)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    account_id = account["account_id"]
+    old_threshold = float(account.get("threshold", 0.8))
+
+    # Update threshold
+    db.update_threshold(account_id, payload.threshold)
+
+    return {
+        "account_id": account_id,
+        "phone_number": phone_number,
+        "old_threshold": old_threshold,
+        "new_threshold": payload.threshold,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
