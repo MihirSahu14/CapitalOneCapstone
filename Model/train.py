@@ -1,20 +1,19 @@
-from __future__ import annotations
-
 import os
 
-import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import DoubleTensorType, StringTensorType
 
 TRAIN_PATH = "archive/fraudTrain.csv"
 TEST_PATH  = "archive/fraudTest.csv"
-MODEL_PATH = "data/processed/model.joblib"
+ONNX_PATH  = "data/processed/model.onnx"
+CALIB_PATH = "data/processed/calibration_scores.npy"
 
 SOURCE_FEATURES = [
     "amt", "merchant", "category", "city", "state",
@@ -22,13 +21,12 @@ SOURCE_FEATURES = [
     "trans_date_trans_time", "dob", "is_fraud",
 ]
 
-NUMERIC_FEATURES     = ["amount", "city_pop", "hour", "day_of_week", "distance"]
+NUMERIC_FEATURES     = ["amount", "city_pop", "hour", "day_of_week", "distance", "age"]
 CATEGORICAL_FEATURES = ["merchant", "category", "state"]
 MODEL_FEATURES       = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
-    """Compute distance in km between two lat/lon points."""
     R = 6371.0
     lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
     dlat = lat2 - lat1
@@ -44,6 +42,8 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df["distance"]    = haversine_distance(
         df["lat"], df["long"], df["merch_lat"], df["merch_long"]
     )
+    dob = pd.to_datetime(df["dob"])
+    df["age"] = (dt - dob).dt.days / 365.25
     return df
 
 
@@ -64,12 +64,17 @@ def build_pipeline() -> Pipeline:
         ],
         remainder="drop",
     )
-    return Pipeline(
-        steps=[
-            ("preprocess", preprocess),
-            ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
-        ]
-    )
+    return Pipeline(steps=[
+        ("preprocess", preprocess),
+        ("clf", RandomForestClassifier(
+            n_estimators=100,
+            max_depth=20,
+            min_samples_split=10,
+            class_weight="balanced",
+            random_state=42,
+            n_jobs=-1,
+        )),
+    ])
 
 
 def evaluate(label: str, model: Pipeline, x: pd.DataFrame, y: pd.Series) -> None:
@@ -86,26 +91,41 @@ def main() -> None:
     x = train_df[MODEL_FEATURES]
     y = train_df["is_fraud"]
 
-    x_train, x_val, y_train, y_val = train_test_split(
-        x, y, test_size=0.2, random_state=42, stratify=y
-    )
-
-    print(f"Training on {len(x_train):,} rows...")
+    print(f"Training on {len(x):,} rows...")
     model = build_pipeline()
-    model.fit(x_train, y_train)
-
-    evaluate("Validation Set", model, x_val, y_val)
+    model.fit(x, y)
 
     print("\nLoading held-out test data...")
     test_df = load_frame(TEST_PATH)
     evaluate("Held-out Test Set", model, test_df[MODEL_FEATURES], test_df["is_fraud"])
 
-    print("\nSaving model artifact...")
-    calibration_scores = sorted(model.predict_proba(x_train)[:, 1].tolist())
-    artifact = {"model": model, "calibration_scores": calibration_scores}
-    os.makedirs("data/processed", exist_ok=True)
-    joblib.dump(artifact, MODEL_PATH)
-    print(f"Wrote {MODEL_PATH}")
+    # Save calibration scores from full training set
+    print("\nSaving calibration scores...")
+    probs_train = model.predict_proba(x)[:, 1]
+    calibration_scores = np.sort(probs_train)
+
+    # Export to ONNX
+    print("Exporting to ONNX...")
+    initial_types = [
+        ("amount",      DoubleTensorType([None, 1])),
+        ("city_pop",    DoubleTensorType([None, 1])),
+        ("hour",        DoubleTensorType([None, 1])),
+        ("day_of_week", DoubleTensorType([None, 1])),
+        ("distance",    DoubleTensorType([None, 1])),
+        ("age",         DoubleTensorType([None, 1])),
+        ("merchant",    StringTensorType([None, 1])),
+        ("category",    StringTensorType([None, 1])),
+        ("state",       StringTensorType([None, 1])),
+    ]
+    onnx_model = convert_sklearn(
+        model,
+        initial_types=initial_types,
+        target_opset=12,
+        options={id(model): {"zipmap": False}}
+    )
+    with open(ONNX_PATH, "wb") as f:
+        f.write(onnx_model.SerializeToString())
+    print(f"Saved → {ONNX_PATH}")
 
 
 if __name__ == "__main__":

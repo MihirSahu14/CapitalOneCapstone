@@ -10,10 +10,10 @@ CALIB_PATH  = "data/processed/calibration_scores.npy"
 SOURCE_FEATURES = [
     "amt", "merchant", "category", "city", "state",
     "city_pop", "lat", "long", "merch_lat", "merch_long",
-    "trans_date_trans_time", "is_fraud",
+    "trans_date_trans_time", "dob", "is_fraud",
 ]
 
-NUMERIC_FEATURES     = ["amount", "city_pop", "hour", "day_of_week", "distance"]
+NUMERIC_FEATURES     = ["amount", "city_pop", "hour", "day_of_week", "distance", "age"]
 CATEGORICAL_FEATURES = ["merchant", "category", "state"]
 
 
@@ -33,6 +33,8 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df["distance"]    = haversine_distance(
         df["lat"], df["long"], df["merch_lat"], df["merch_long"]
     )
+    dob = pd.to_datetime(df["dob"])
+    df["age"] = (dt - dob).dt.days / 365.25
     return df
 
 
@@ -54,16 +56,16 @@ def main():
     session = rt.InferenceSession(ONNX_PATH)
     calibration_scores = np.load(CALIB_PATH)
 
-    # Pass each column individually
     inputs = {
-        "amount": df["amount"].values.astype(np.float64).reshape(-1, 1),
-        "city_pop": df["city_pop"].values.astype(np.float64).reshape(-1, 1),
-        "hour": df["hour"].values.astype(np.float64).reshape(-1, 1),
+        "amount":      df["amount"].values.astype(np.float64).reshape(-1, 1),
+        "city_pop":    df["city_pop"].values.astype(np.float64).reshape(-1, 1),
+        "hour":        df["hour"].values.astype(np.float64).reshape(-1, 1),
         "day_of_week": df["day_of_week"].values.astype(np.float64).reshape(-1, 1),
-        "distance": df["distance"].values.astype(np.float64).reshape(-1, 1),
-        "merchant": df["merchant"].values.reshape(-1, 1),
-        "category": df["category"].values.reshape(-1, 1),
-        "state": df["state"].values.reshape(-1, 1),
+        "distance":    df["distance"].values.astype(np.float64).reshape(-1, 1),
+        "age":         df["age"].values.astype(np.float64).reshape(-1, 1),
+        "merchant":    df["merchant"].values.reshape(-1, 1),
+        "category":    df["category"].values.reshape(-1, 1),
+        "state":       df["state"].values.reshape(-1, 1),
     }
 
     print("Running inference...")
