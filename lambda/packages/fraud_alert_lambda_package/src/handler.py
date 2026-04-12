@@ -63,10 +63,10 @@ def lambda_handler(event: dict, context: object) -> dict:
     for record in event.get("Records", []):
         body = json.loads(record["body"])
         transaction_id = body["transaction_id"]
-        amount         = float(body["amount"])
-        merchant       = body["merchant"]
-        phone_number   = body["phone_number"]
-        state          = body.get("state", "")
+        amount = float(body["amount"])
+        merchant = body["merchant"]
+        phone_number = body["phone_number"]
+        state = body.get("state", "")
 
         # Send WhatsApp — if this fails, SQS will retry
         msg = build_alert_message(amount, merchant, state)
