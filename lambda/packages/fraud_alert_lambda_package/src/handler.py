@@ -68,7 +68,6 @@ def lambda_handler(event: dict, context: object) -> dict:
         phone_number = body["phone_number"]
         state = body.get("state", "")
 
-        # Send WhatsApp — if this fails, SQS will retry
         msg = build_alert_message(amount, merchant, state)
         send_whatsapp(phone_number, msg)
 
