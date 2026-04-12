@@ -10,4 +10,9 @@ app = FastAPI(
     openapi_url="/transactions/openapi.json"
 )
 app.include_router(transactions.router)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 lambda_handler = Mangum(app, lifespan="off", api_gateway_base_path="/prod")
