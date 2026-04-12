@@ -78,8 +78,6 @@ def lambda_handler(event: dict, context: object) -> dict:
             # This prevents hammering Twilio on repeated retries
             continue
 
-        # Mark pending — if this fails, log but don't retry
-        # (WhatsApp already sent, no point resending)
         try:
             db.mark_transaction_pending(transaction_id, True)
         except Exception as e:
