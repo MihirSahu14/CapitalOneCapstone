@@ -69,7 +69,14 @@ def lambda_handler(event: dict, context: object) -> dict:
         state = body.get("state", "")
 
         msg = build_alert_message(amount, merchant, state)
-        send_whatsapp(phone_number, msg)
+
+        try:
+            send_whatsapp(phone_number, msg)
+        except Exception as e:
+            print(f"[ERROR] WhatsApp send failed for {transaction_id}: {e}")
+            # Don't re-raise — message won't retry, goes to DLQ once
+            # This prevents hammering Twilio on repeated retries
+            continue
 
         # Mark pending — if this fails, log but don't retry
         # (WhatsApp already sent, no point resending)
