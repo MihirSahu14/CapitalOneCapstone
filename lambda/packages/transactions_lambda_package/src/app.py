@@ -9,6 +9,7 @@ app = FastAPI(
     docs_url="/transactions/docs",
     openapi_url="/transactions/openapi.json"
 )
+
 app.include_router(transactions.router)
 
 @app.get("/health")
