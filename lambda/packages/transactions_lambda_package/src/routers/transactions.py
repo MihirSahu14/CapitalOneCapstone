@@ -30,7 +30,11 @@ def create_transaction(payload: CreateTransactionRequest) -> dict:
         raise HTTPException(status_code=404, detail="Account not found")
 
     scorer = get_scorer()
-    score = scorer.score(payload.model_dump())
+    score = scorer.score({
+        **payload.model_dump(),
+        "home_state": account.get("home_state", ""),
+        "dob": account.get("dob", ""),
+    })
 
     transaction_id = str(uuid4())
     now = datetime.now(timezone.utc).isoformat()
