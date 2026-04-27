@@ -1,0 +1,98 @@
+.container {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.pageHeader h2 {
+  margin: 0.2rem 0 0.5rem;
+}
+
+.sectionLabel {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+}
+
+.sectionCopy {
+  margin: 0;
+  max-width: 48rem;
+  color: var(--muted-text);
+}
+
+.twoColumn {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  padding: 1.5rem;
+  border: 1px solid var(--card-border);
+  border-radius: 1.25rem;
+  background: var(--card-surface);
+  box-shadow: 0 20px 45px rgba(2, 24, 43, 0.08);
+}
+
+.card h3 {
+  margin-top: 0;
+}
+
+.accountSummary {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.accountSummary div {
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(180deg, #f8fcff 0%, #eef5fb 100%);
+}
+
+.accountSummary span {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-text);
+}
+
+.thresholdRow {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+}
+
+.thresholdField {
+  flex: 1;
+}
+
+.helperText,
+.message,
+.error {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.9rem;
+}
+
+.helperText,
+.message {
+  background: rgba(0, 73, 119, 0.08);
+  color: var(--dark-text);
+}
+
+.error {
+  background: rgba(208, 48, 39, 0.12);
+  color: #8e1f1f;
+}
+
+@media (max-width: 720px) {
+  .thresholdRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

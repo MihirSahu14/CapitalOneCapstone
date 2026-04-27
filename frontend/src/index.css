@@ -1,0 +1,9 @@
+body {
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: "Cascadia Code", Consolas, monospace;
+}
