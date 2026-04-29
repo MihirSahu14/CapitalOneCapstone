@@ -1,5 +1,11 @@
 # Fraud Detection System - Capital One Capstone
 
+> **Note:** This branch (`main`) contains the original local prototype and is no longer actively maintained.
+> The production implementation — fully deployed on AWS Lambda across two regions with a real ML model,
+> multi-region DynamoDB, SQS, and Route 53 failover — lives on the
+> [`deploy/prod`](https://github.com/MihirSahu14/CapitalOneCapstone/tree/deploy/prod) branch.
+> See that branch for the current README and setup instructions.
+
 This repo is a production-style starter for your capstone requirements:
 - Fraud score per transaction in `[0, 1]`
 - User-configurable alert threshold
