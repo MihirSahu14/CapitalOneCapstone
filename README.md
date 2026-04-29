@@ -47,6 +47,7 @@ fraud-alert-api Lambda → Twilio → Customer WhatsApp
         ↓ (customer replies)
 Twilio Webhook → twilio-webhook-api Lambda → DynamoDB
 ```
+![Architecture Diagram](docs/architecture.png)
 
 ### AWS Services Used
 
