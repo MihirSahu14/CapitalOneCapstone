@@ -214,10 +214,7 @@ lambda/
 
 Model/
 ├── train_xgb.py                      # XGBoost training script
-├── export_onnx.py                    # Export trained model to ONNX format
 ├── test_onnx.py                      # Verify ONNX model outputs
-├── tune_xgb_recall.py                # Hyperparameter tuning for recall
-└── data/processed/                   # Training runs (git-ignored)
 ```
 
 ---
