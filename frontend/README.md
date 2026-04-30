@@ -1,70 +1,132 @@
-# Getting Started with Create React App
+# Sentinel.AI Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This README covers the `frontend/` portion of the project only. Deployment and production hosting details for the AWS environment are documented separately by the teammate who owns that handoff.
 
-## Available Scripts
+## Repository Link
 
-In the project directory, you can run:
+GitHub repository: [https://github.com/MihirSahu14/CapitalOneCapstone](https://github.com/MihirSahu14/CapitalOneCapstone)
 
-### `npm start`
+## Frontend Overview
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+The frontend is a React single-page application for demonstrating the Sentinel.AI fraud detection workflow. It provides three user-facing views:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+1. `Past Transactions`
+   Loads an account by phone number and displays recent scored transactions returned by the backend.
+2. `User Details`
+   Loads an existing user, creates a demo user, and updates the fraud score threshold for that account.
+3. `New Transaction`
+   Submits a new transaction and shows the fraud score and flagged/clear result returned by the API.
 
-### `npm test`
+The UI is built with:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- React
+- React Router
+- Axios
+- CSS modules for page-specific styling
 
-### `npm run build`
+## Setup Steps
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Node.js 18+ recommended
+- npm
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Local Setup
 
-### `npm run eject`
+1. Open a terminal in the `frontend/` directory.
+2. Install dependencies:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+npm install
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Configure the API base URL.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The app reads `REACT_APP_API_BASE_URL` from `frontend/.env`.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- If you want requests to use the deployed backend directly, set:
 
-## Learn More
+```env
+REACT_APP_API_BASE_URL=https://api.freud.dpdns.org
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- If `REACT_APP_API_BASE_URL` is left blank, Create React App can still proxy API requests during local development because `package.json` includes:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```json
+"proxy": "https://api.freud.dpdns.org"
+```
 
-### Code Splitting
+4. Start the development server:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+npm start
+```
 
-### Analyzing the Bundle Size
+5. Open `http://localhost:3000`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Production Build
 
-### Making a Progressive Web App
+To create a production frontend bundle:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+npm run build
+```
 
-### Advanced Configuration
+## How The Frontend Works
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### App Structure
 
-### Deployment
+- [App.js](/c:/Users/mihir/Desktop/UW%20Madison/Spring%202026/CapitalOneProject/CapitalOne/frontend/src/App.js) sets up the main page shell and the three routes.
+- `src/components/Transactions.js` handles account lookup and transaction history display.
+- `src/components/User.js` handles user lookup, account creation, and threshold updates.
+- `src/components/NewTransaction.js` handles transaction submission and fraud score display.
+- `src/api.js` centralizes Axios configuration and normalizes API error messages.
+- `src/demoState.js` stores the most recent phone number in `localStorage` so it carries across pages.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Data Flow
 
-### `npm run build` fails to minify
+- The user enters a phone number or transaction details in the UI.
+- The frontend sends requests to the backend using Axios.
+- Responses are rendered into cards, forms, and tables.
+- The most recently used phone number is saved in browser `localStorage` and reused across screens.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Backend Endpoints Used By The Frontend
+
+- `GET /accounts/by-phone/:phone`
+- `POST /accounts`
+- `PATCH /accounts/by-phone/:phone/threshold`
+- `POST /transactions`
+
+## What Works
+
+- Navigation between all three frontend pages
+- Loading account details by registered phone number
+- Viewing recent transactions for an account
+- Creating a demo user from the UI
+- Updating an account fraud threshold
+- Submitting a transaction for live fraud scoring
+- Displaying API success and error states in the UI
+- Reusing the last entered phone number across pages
+
+## What Does Not Work / Current Limitations
+
+- This frontend depends on the backend API being available; without the API, the pages cannot demonstrate their main flows
+- There is no authentication or role-based access control in the frontend
+- Form validation is basic and mostly relies on backend validation for invalid payloads
+- Automated frontend tests were not built out beyond the default React tooling setup
+- The README does not document AWS deployment because that production handoff is maintained separately
+
+## What We Would Work On Next
+
+- Add stronger client-side validation and clearer inline form guidance
+- Add loading skeletons and more polished empty/error states
+- Add automated tests for routing, forms, and API response handling
+- Improve accessibility coverage for keyboard navigation and screen readers
+- Add filtering/sorting for transaction history
+- Add authentication if this moved beyond a demo workflow
+
+## Additional Notes For Final Handoff
+
+- Frontend code lives in the `frontend/` directory of the main repository.
+- The frontend is designed to work with the deployed backend API used by the team demo.
+- Any AWS hosting, production deployment, or infrastructure notes should be taken from the separate deployment/production README maintained by the teammate responsible for that environment.
